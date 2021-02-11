@@ -14,12 +14,13 @@ might need to adjust ansible variables containing the interface names
 
 Also, for getting the x509 certificates, we use our domain =dane.onl=
 for registering the machines. Of course the DNS zone is a DNSSEC
-signed domain that is used as the parent domain. In the tutorial we
-are using =dane.onl=. If you want to create the tutorial environment,
-you need to operate your own parent domain, have it DNSSEC signed and
+signed domain that is used as the domain for the tutorial machines. 
+
+In the tutorial we are using =dane.onl=. If you want to create the tutorial environment,
+you need to operate your own domain, have it DNSSEC signed and
 in the DNSSEC trust-chain. The ansible scripts use =nsupdate= to send
-dynamic DNS updates to the primary authoritative server of this parent
-domain to create the DNS delegation. So the parent domain must be
+dynamic DNS updates to the primary authoritative server of this 
+domain to create the DNS delegation. So the domain must be
 configured for dynamic DNS secured by the TISG (Transaction Signature)
 key =doh.key=.
 
@@ -29,7 +30,7 @@ You can create your own TSIG key with
 tsig-keygen dane.key
 #+END_EXAMPLE
 
-Our BIND 9 configuration in =named.conf= for the parent zone looks
+Our BIND 9 configuration in =named.conf= for the DNS zone looks
 like this:
 
 #+BEGIN_EXAMPLE
