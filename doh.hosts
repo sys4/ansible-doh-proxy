@@ -1,0 +1,7 @@
+[dohproxy]
+192.0.2.10
+192.0.2.100
+2001:db8::53
+
+[dohproxy:vars]
+ansible_user=root

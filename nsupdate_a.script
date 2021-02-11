@@ -1,0 +1,8 @@
+ttl 60
+server primary.dns.server
+del doh{{ ansible_hostname[-3:] }}.dane.onl.
+send
+add doh{{ ansible_hostname[-3:] }}.dane.onl. a {{ ansible_eth0.ipv4.address }}
+add doh{{ ansible_hostname[-3:] }}.dane.onl. aaaa {{ ansible_eth0.ipv6[0].address }}
+send
+quit

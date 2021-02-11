@@ -1,0 +1,70 @@
+---
+- name: Install DOH-Proxy webinar server (on CentOS 8 VMs)
+  hosts: dohproxy
+  become: true
+  tasks:
+  - name: Install tools
+    dnf: name="{{ item }}"
+    loop:
+      - tmux
+      - tcpdump
+      - emacs-nox
+      - nano
+      - vim
+      - cockpit
+      - firewalld
+      - git
+      - socat
+      - bind-utils
+      - bind
+  - name: Add User
+    # Password "DNSandBIND"
+    user: name="user" group="wheel" password="$6$MENandMICE$TIlldJNfpeUjbnZnuY2AQd6Khd3JTcywS/HYrOyL7j2z10c98EVSpBYdLh8hBcb0Xagrnu5qt60zRacLregYj/"
+  - name: Enable and start cockpit
+    service: name="cockpit" enabled="yes" state="started"
+  - name: Enable and start Firewall
+    service: name="firewalld" enabled="yes" state="started"
+  - name: Enable and start BIND 9
+    service: name="named" enabled="yes" state="started"
+  - name: Enable Password Authentication
+    lineinfile: path="/etc/ssh/sshd_config" regexp="^#PasswordAuthentication yes" line="PasswordAuthentication yes"
+    notify: "kick_ssh"
+  handlers:
+  - name: "kick_ssh"
+    service: name="sshd" state="restarted"
+- name: Register machine in DNS
+  hosts: dohproxy
+  become: true
+  tasks:
+  - name: Copy DNS files to server
+    template: src="{{ item }}" dest="/tmp" owner="root" group="root" mode="0440"
+    loop:
+      - doh.key
+      - nsupdate_a.script
+  - name: Create DNS entries
+    command: nsupdate -k /tmp/doh.key /tmp/nsupdate_a.script
+- name: Install ACME Cert
+  hosts: dohproxy
+  become: true
+  tasks:
+    - name: stop Firewall
+      service: name="firewalld" enabled="yes" state="stopped"
+    - name: Clone ACME.SH
+      git: repo="https://github.com/Neilpang/acme.sh" dest="/root/acme.sh"
+    - name: Get Certificate
+      shell: "/root/acme.sh/acme.sh --issue  -d doh{{ ansible_hostname[-3:] }}.dane.onl  --standalone"
+      ignore_errors: yes
+      args:
+        creates: "/root/.acme.sh/doh{{ ansible_hostname[-3:] }}.dane.onl/doh{{ ansible_hostname[-3:] }}.dane.onl.cer"
+    - name: start Firewall
+      service: name="firewalld" enabled="yes" state="started"
+    - name: set Certificate for Cockpit
+      shell: "/usr/sbin/remotectl certificate /root/.acme.sh/doh{{ ansible_hostname[-3:] }}.dane.onl/doh{{ ansible_hostname[-3:] }}.dane.onl.cer /root/.acme.sh/doh{{ ansible_hostname[-3:] }}.dane.onl/ca.cer /root/.acme.sh/doh{{ ansible_hostname[-3:] }}.dane.onl/doh{{ ansible_hostname[-3:] }}.dane.onl.key"
+- name: cleanup
+  hosts: dohproxy
+  become: true
+  tasks:
+    - name: Clean DOH  Key
+      file: state="absent" path="/tmp/doh.key"
+    - name: Clean nsupdate script
+      file: state="absent" path="/tmp/nsupdate_a.script"

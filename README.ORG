@@ -1,0 +1,47 @@
+#+Title: Readme for Ansible Playbook for DNS-over-HTTPS Proxy workshop
+#+Author: Carsten Strotmann
+#+Date: <2021-02-11 Thu>
+
+These files are used to create the tutorial environment for the DoH Proxy
+workshop.
+
+The Ansible playbook has been used and tested with public cloud server
+provider such as DigitalOcean (https://digitalocean.com) und Vultr
+(https://vultr.com). It will probably work with every CentOS 8
+installation. Depending on the names of the network interfaces, you
+might need to adjust ansible variables containing the interface names
+(like =eth0= or =ens3= etc).
+
+Also, for getting the x509 certificates, we use our domain =dane.onl=
+for registering the machines. Of course the DNS zone is a DNSSEC
+signed domain that is used as the parent domain. In the tutorial we
+are using =dane.onl=. If you want to create the tutorial environment,
+you need to operate your own parent domain, have it DNSSEC signed and
+in the DNSSEC trust-chain. The ansible scripts use =nsupdate= to send
+dynamic DNS updates to the primary authoritative server of this parent
+domain to create the DNS delegation. So the parent domain must be
+configured for dynamic DNS secured by the TISG (Transaction Signature)
+key =doh.key=.
+
+You can create your own TSIG key with
+
+#+BEGIN_EXAMPLE
+tsig-keygen dane.key
+#+END_EXAMPLE
+
+Our BIND 9 configuration in =named.conf= for the parent zone looks
+like this:
+
+#+BEGIN_EXAMPLE
+key "DOH-Proxy" {
+        algorithm hmac-sha256;
+        secret "<Enter your TSIG key here>";
+};
+
+zone "dane.onl" {
+     type master;
+     allow-update { key DOH-Proxy; };
+     auto-dnssec maintain;
+     file "master/dane.onl";
+};
+#+END_EXAMPLE
